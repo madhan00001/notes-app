@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login — NoteShare</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="auth-page">
+
+<div class="auth-card">
+  <div class="auth-logo">
+    <div class="logo-icon">📚</div>
+    <h1 class="auth-title">Welcome back!</h1>
+    <p class="auth-sub">Log in to your NoteShare account</p>
+  </div>
+
+  <div id="alert-box"></div>
+
+  <div class="form-group">
+    <label class="form-label">Email Address</label>
+    <input type="email" id="email" class="form-control" placeholder="you@example.com" autocomplete="email">
+  </div>
+  <div class="form-group">
+    <label class="form-label">Password</label>
+    <input type="password" id="password" class="form-control" placeholder="Enter your password" autocomplete="current-password">
+  </div>
+
+  <button class="btn btn-primary btn-full" id="login-btn" onclick="handleLogin()" style="margin-top:6px;padding:12px">
+    Login →
+  </button>
+
+  <div class="auth-link">
+    Don't have an account? <a href="/register">Create one free</a>
+  </div>
+  <div class="auth-link" style="margin-top:8px">
+    <a href="/">← Back to Home</a>
+  </div>
+</div>
+
+<script src="/js/app.js"></script>
+<script>
+  // Redirect if already logged in
+  getSession().then(s => { if (s.loggedIn) window.location.href = '/dashboard'; });
+
+  async function handleLogin() {
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    const alertBox = document.getElementById('alert-box');
+    const btn = document.getElementById('login-btn');
+
+    alertBox.innerHTML = '';
+
+    if (!email || !password) {
+      alertBox.innerHTML = '<div class="alert alert-error">Please fill in all fields.</div>';
+      return;
+    }
+
+    btn.textContent = 'Logging in...';
+    btn.disabled = true;
+
+    const { ok, data } = await apiRequest('/api/auth/login', 'POST', { email, password });
+
+    if (ok) {
+      showToast('Login successful! Redirecting...', 'success');
+      setTimeout(() => window.location.href = '/dashboard', 900);
+    } else {
+      alertBox.innerHTML = `<div class="alert alert-error">⚠️ ${data.message || 'Login failed.'}</div>`;
+      btn.textContent = 'Login →';
+      btn.disabled = false;
+    }
+  }
+
+  // Enter key support
+  document.addEventListener('keypress', e => { if (e.key === 'Enter') handleLogin(); });
+</script>
+</body>
+</html>

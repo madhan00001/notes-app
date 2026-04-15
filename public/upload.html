@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Upload Notes — NoteShare</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+  <div class="nav-container">
+    <a href="/" class="nav-logo">
+      <div class="logo-icon">📚</div>
+      NoteShare
+    </a>
+    <ul class="nav-links" id="nav-links">
+      <li><a href="/">Home</a></li>
+      <li><a href="/view-notes">View Notes</a></li>
+      <li><a href="/upload" class="active" id="nav-upload" style="display:none">Upload</a></li>
+      <li><a href="/dashboard" id="nav-user-info" style="display:none;align-items:center;gap:6px"><span></span></a></li>
+      <li><a href="/login" id="nav-login">Login</a></li>
+      <li><a href="/register" id="nav-register" class="btn-nav btn">Register</a></li>
+      <li><button id="nav-logout" onclick="logout()" class="btn btn-sm" style="display:none;background:#fee2e2;color:#dc2626;border:none;cursor:pointer">Logout</button></li>
+    </ul>
+    <div id="hamburger" class="hamburger"><span></span><span></span><span></span></div>
+  </div>
+</nav>
+
+<!-- PAGE HEADER -->
+<div class="page-header">
+  <div class="page-header-content">
+    <h1>📤 Upload Notes</h1>
+    <p>Share your knowledge with the student community</p>
+  </div>
+</div>
+
+<div class="section" style="max-width:680px">
+  <div style="background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);padding:36px;box-shadow:var(--shadow)">
+
+    <div id="alert-box"></div>
+
+    <!-- Title -->
+    <div class="form-group">
+      <label class="form-label">📝 Notes Title <span style="color:var(--danger)">*</span></label>
+      <input type="text" id="title" class="form-control" placeholder="e.g. Chapter 5 – Newton's Laws of Motion" maxlength="200">
+    </div>
+
+    <!-- Subject -->
+    <div class="form-group">
+      <label class="form-label">📚 Subject <span style="color:var(--danger)">*</span></label>
+      <select id="subject" class="form-control">
+        <option value="">— Select Subject —</option>
+        <option>Mathematics</option>
+        <option>Physics</option>
+        <option>Chemistry</option>
+        <option>Biology</option>
+        <option>Computer Science</option>
+        <option>English</option>
+        <option>History</option>
+        <option>Geography</option>
+        <option>Economics</option>
+        <option>Engineering</option>
+        <option>Psychology</option>
+        <option>Law</option>
+        <option>Commerce</option>
+        <option>Other</option>
+      </select>
+    </div>
+
+    <!-- Description -->
+    <div class="form-group">
+      <label class="form-label">📄 Description</label>
+      <textarea id="description" class="form-control" placeholder="What topics does this cover? Any special notes for students..." rows="4" maxlength="1000"></textarea>
+      <div style="text-align:right;font-size:0.75rem;color:var(--text-light);margin-top:4px">
+        <span id="char-count">0</span>/1000
+      </div>
+    </div>
+
+    <!-- File Upload -->
+    <div class="form-group">
+      <label class="form-label">📎 File <span style="color:var(--danger)">*</span></label>
+      <div class="upload-zone" id="upload-zone">
+        <input type="file" id="file-input" accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.png,.jpg,.jpeg" onchange="fileSelected(this)">
+        <div class="upload-icon">☁️</div>
+        <div class="upload-text">Click or drag & drop your file here</div>
+        <div class="upload-hint">PDF, DOC, DOCX, PPT, PPTX, TXT, Images — Max 20MB</div>
+      </div>
+      <div id="file-info" style="display:none"></div>
+    </div>
+
+    <!-- Progress -->
+    <div id="progress-bar" style="display:none;margin-bottom:16px">
+      <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+        <div id="progress-fill" style="height:100%;background:var(--primary);border-radius:3px;width:0%;transition:width 0.3s"></div>
+      </div>
+      <div style="font-size:0.78rem;color:var(--text-muted);margin-top:4px" id="progress-label">Uploading...</div>
+    </div>
+
+    <button class="btn btn-primary btn-full" id="upload-btn" onclick="handleUpload()" style="padding:13px;font-size:1rem">
+      📤 Upload Notes
+    </button>
+  </div>
+
+  <!-- Tips -->
+  <div style="background:var(--primary-bg);border:1px solid #c7d2fe;border-radius:var(--radius);padding:20px;margin-top:20px">
+    <div style="font-weight:600;color:var(--primary);margin-bottom:10px">💡 Upload Tips</div>
+    <ul style="list-style:none;display:flex;flex-direction:column;gap:6px;font-size:0.85rem;color:var(--primary-dark)">
+      <li>✅ Use descriptive titles so others can find your notes easily</li>
+      <li>✅ PDF format works best for consistent formatting</li>
+      <li>✅ Add a clear description of what topics are covered</li>
+      <li>✅ Max file size is 20MB per upload</li>
+    </ul>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <strong>📚 NoteShare</strong> — Made with ❤️ for students
+</footer>
+
+<script src="/js/app.js"></script>
+<script>
+  // Require login
+  requireLogin();
+
+  // Character counter
+  document.getElementById('description').addEventListener('input', function() {
+    document.getElementById('char-count').textContent = this.value.length;
+  });
+
+  // Drag & drop
+  const zone = document.getElementById('upload-zone');
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.classList.remove('drag-over');
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      const input = document.getElementById('file-input');
+      input.files = files;
+      fileSelected(input);
+    }
+  });
+
+  function fileSelected(input) {
+    const file = input.files[0];
+    const info = document.getElementById('file-info');
+    if (!file) { info.style.display = 'none'; return; }
+
+    const maxSize = 20 * 1024 * 1024;
+    if (file.size > maxSize) {
+      showToast('File too large! Max size is 20MB.', 'error');
+      input.value = '';
+      info.style.display = 'none';
+      return;
+    }
+
+    info.style.display = 'block';
+    info.innerHTML = `
+      <div class="file-selected">
+        <span style="font-size:1.4rem">${getFileIcon(file.name)}</span>
+        <span class="file-selected-name">${escHtml(file.name)}</span>
+        <span class="file-selected-size">${formatSize(file.size)}</span>
+      </div>`;
+  }
+
+  async function handleUpload() {
+    const title = document.getElementById('title').value.trim();
+    const subject = document.getElementById('subject').value;
+    const description = document.getElementById('description').value.trim();
+    const fileInput = document.getElementById('file-input');
+    const alertBox = document.getElementById('alert-box');
+    const btn = document.getElementById('upload-btn');
+
+    alertBox.innerHTML = '';
+
+    if (!title) { alertBox.innerHTML = '<div class="alert alert-error">Please enter a title.</div>'; return; }
+    if (!subject) { alertBox.innerHTML = '<div class="alert alert-error">Please select a subject.</div>'; return; }
+    if (!fileInput.files[0]) { alertBox.innerHTML = '<div class="alert alert-error">Please select a file to upload.</div>'; return; }
+
+    const formData = new FormData();
+    formData.append('title', title);
+    formData.append('subject', subject);
+    formData.append('description', description);
+    formData.append('file', fileInput.files[0]);
+
+    btn.textContent = 'Uploading...';
+    btn.disabled = true;
+
+    // Show progress
+    const progress = document.getElementById('progress-bar');
+    const fill = document.getElementById('progress-fill');
+    const label = document.getElementById('progress-label');
+    progress.style.display = 'block';
+
+    // Fake progress animation while uploading
+    let pct = 0;
+    const prog = setInterval(() => {
+      pct = Math.min(pct + 5, 85);
+      fill.style.width = pct + '%';
+    }, 150);
+
+    try {
+      const res = await fetch('/api/notes/upload', {
+        method: 'POST',
+        credentials: 'include',
+        body: formData
+      });
+      const data = await res.json();
+
+      clearInterval(prog);
+      fill.style.width = '100%';
+      label.textContent = 'Upload complete!';
+
+      if (res.ok) {
+        alertBox.innerHTML = '<div class="alert alert-success">✅ Notes uploaded successfully!</div>';
+        showToast('Notes uploaded!', 'success');
+        // Reset form
+        document.getElementById('title').value = '';
+        document.getElementById('subject').value = '';
+        document.getElementById('description').value = '';
+        fileInput.value = '';
+        document.getElementById('file-info').style.display = 'none';
+        document.getElementById('char-count').textContent = '0';
+        setTimeout(() => { progress.style.display = 'none'; fill.style.width = '0%'; }, 2000);
+      } else {
+        alertBox.innerHTML = `<div class="alert alert-error">⚠️ ${data.message}</div>`;
+        progress.style.display = 'none';
+      }
+    } catch {
+      clearInterval(prog);
+      progress.style.display = 'none';
+      alertBox.innerHTML = '<div class="alert alert-error">Upload failed. Please try again.</div>';
+    }
+
+    btn.textContent = '📤 Upload Notes';
+    btn.disabled = false;
+  }
+</script>
+</body>
+</html>

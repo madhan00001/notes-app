@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register — NoteShare</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="auth-page">
+
+<div class="auth-card">
+  <div class="auth-logo">
+    <div class="logo-icon">🎓</div>
+    <h1 class="auth-title">Create Account</h1>
+    <p class="auth-sub">Join NoteShare — free forever</p>
+  </div>
+
+  <div id="alert-box"></div>
+
+  <div class="form-group">
+    <label class="form-label">Full Name</label>
+    <input type="text" id="name" class="form-control" placeholder="Your full name" autocomplete="name">
+  </div>
+  <div class="form-group">
+    <label class="form-label">Email Address</label>
+    <input type="email" id="email" class="form-control" placeholder="you@example.com" autocomplete="email">
+  </div>
+  <div class="form-group">
+    <label class="form-label">Password</label>
+    <input type="password" id="password" class="form-control" placeholder="Min. 6 characters" autocomplete="new-password" oninput="checkStrength(this.value)">
+    <div class="pass-strength">
+      <div class="strength-bar"><div class="strength-fill" id="strength-fill" style="width:0%"></div></div>
+      <div class="strength-label" id="strength-label">Enter a password</div>
+    </div>
+  </div>
+  <div class="form-group">
+    <label class="form-label">Confirm Password</label>
+    <input type="password" id="confirm-password" class="form-control" placeholder="Repeat your password" autocomplete="new-password">
+  </div>
+
+  <button class="btn btn-primary btn-full" id="reg-btn" onclick="handleRegister()" style="margin-top:6px;padding:12px">
+    Create Account →
+  </button>
+
+  <div class="auth-link">
+    Already have an account? <a href="/login">Log in</a>
+  </div>
+  <div class="auth-link" style="margin-top:8px">
+    <a href="/">← Back to Home</a>
+  </div>
+</div>
+
+<script src="/js/app.js"></script>
+<script>
+  getSession().then(s => { if (s.loggedIn) window.location.href = '/dashboard'; });
+
+  function checkStrength(val) {
+    const fill = document.getElementById('strength-fill');
+    const label = document.getElementById('strength-label');
+    let score = 0;
+    if (val.length >= 6) score++;
+    if (val.length >= 10) score++;
+    if (/[A-Z]/.test(val)) score++;
+    if (/[0-9]/.test(val)) score++;
+    if (/[^A-Za-z0-9]/.test(val)) score++;
+    const colors = ['#ef4444','#f59e0b','#f59e0b','#10b981','#4f46e5'];
+    const labels = ['Too short','Weak','Fair','Strong','Very strong'];
+    const pcts = [10, 30, 55, 75, 100];
+    const i = Math.max(0, score - 1);
+    fill.style.width = pcts[i] + '%';
+    fill.style.background = colors[i];
+    label.textContent = labels[i];
+    label.style.color = colors[i];
+  }
+
+  async function handleRegister() {
+    const name = document.getElementById('name').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    const confirm = document.getElementById('confirm-password').value;
+    const alertBox = document.getElementById('alert-box');
+    const btn = document.getElementById('reg-btn');
+
+    alertBox.innerHTML = '';
+
+    if (!name || !email || !password || !confirm) {
+      alertBox.innerHTML = '<div class="alert alert-error">Please fill in all fields.</div>';
+      return;
+    }
+    if (password.length < 6) {
+      alertBox.innerHTML = '<div class="alert alert-error">Password must be at least 6 characters.</div>';
+      return;
+    }
+    if (password !== confirm) {
+      alertBox.innerHTML = '<div class="alert alert-error">Passwords do not match.</div>';
+      return;
+    }
+
+    btn.textContent = 'Creating account...';
+    btn.disabled = true;
+
+    const { ok, data } = await apiRequest('/api/auth/register', 'POST', { name, email, password });
+
+    if (ok) {
+      showToast('Account created! Redirecting...', 'success');
+      setTimeout(() => window.location.href = '/dashboard', 1000);
+    } else {
+      alertBox.innerHTML = `<div class="alert alert-error">⚠️ ${data.message || 'Registration failed.'}</div>`;
+      btn.textContent = 'Create Account →';
+      btn.disabled = false;
+    }
+  }
+
+  document.addEventListener('keypress', e => { if (e.key === 'Enter') handleRegister(); });
+</script>
+</body>
+</html>

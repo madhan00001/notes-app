@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NoteShare — Student Notes Platform</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+  <div class="nav-container">
+    <a href="/" class="nav-logo">
+      <div class="logo-icon">📚</div>
+      NoteShare
+    </a>
+    <ul class="nav-links" id="nav-links">
+      <li><a href="/" class="active">Home</a></li>
+      <li><a href="/view-notes">View Notes</a></li>
+      <li><a href="/upload" id="nav-upload" style="display:none">Upload</a></li>
+      <li><a href="/dashboard" id="nav-user-info" style="display:none;align-items:center;gap:6px"><span></span></a></li>
+      <li><a href="/login" id="nav-login" class="btn-nav btn">Login</a></li>
+      <li><a href="/register" id="nav-register" class="btn-nav btn" style="background:#fff;color:var(--primary);border:1.5px solid var(--primary)">Register</a></li>
+      <li><button id="nav-logout" onclick="logout()" class="btn btn-sm" style="display:none;background:#fee2e2;color:#dc2626;border:none;cursor:pointer">Logout</button></li>
+    </ul>
+    <div id="hamburger" class="hamburger">
+      <span></span><span></span><span></span>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-content">
+    <div class="hero-badge">🎓 For Students, By Students</div>
+    <h1>Share & Discover<br>Quality Study Notes</h1>
+    <p>Upload your notes, find resources, and ace your exams with the community-driven study hub.</p>
+
+    <div class="hero-search">
+      <input type="text" id="hero-search-input" placeholder="Search by subject, topic, or keyword..." autocomplete="off">
+      <button onclick="heroSearch()">🔍 Search</button>
+    </div>
+
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <div class="number" id="stat-notes">—</div>
+        <div class="label">Notes Shared</div>
+      </div>
+      <div class="hero-stat">
+        <div class="number" id="stat-students">—</div>
+        <div class="label">Students</div>
+      </div>
+      <div class="hero-stat">
+        <div class="number" id="stat-downloads">—</div>
+        <div class="label">Downloads</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- LATEST NOTES -->
+<div class="section">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+    <div>
+      <h2 class="section-title">📂 Latest Notes</h2>
+      <p class="section-sub">Recently uploaded by students</p>
+    </div>
+    <a href="/view-notes" class="btn btn-outline">View All →</a>
+  </div>
+  <div id="latest-notes-grid" class="cards-grid">
+    <div class="loader"><div class="spinner"></div></div>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<div style="background: var(--bg-card); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
+  <div class="section">
+    <div style="text-align:center">
+      <h2 class="section-title">Why NoteShare?</h2>
+      <p class="section-sub">Everything you need to study smarter</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">📤</div>
+        <div class="feature-title">Easy Uploads</div>
+        <div class="feature-text">Upload PDF, Word, PPT and more in seconds. No size hassle, no complicated forms.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔍</div>
+        <div class="feature-title">Smart Search</div>
+        <div class="feature-text">Find exactly what you need by subject, keyword or uploader. Never waste time searching.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">⬇️</div>
+        <div class="feature-title">Free Downloads</div>
+        <div class="feature-text">Download any notes for free. Study offline anytime, anywhere without restrictions.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔒</div>
+        <div class="feature-title">Secure Accounts</div>
+        <div class="feature-text">Your account is protected with bcrypt password hashing and secure sessions.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CTA -->
+<div class="section" style="text-align:center;padding-top:64px;padding-bottom:64px">
+  <div style="max-width:520px;margin:0 auto">
+    <h2 class="section-title" style="font-size:2rem">Ready to start sharing?</h2>
+    <p class="section-sub" style="font-size:1rem">Join thousands of students already using NoteShare to boost their grades.</p>
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+      <a href="/register" class="btn btn-primary" style="padding:12px 28px;font-size:1rem">Create Free Account →</a>
+      <a href="/view-notes" class="btn btn-outline" style="padding:12px 28px;font-size:1rem">Browse Notes</a>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <strong>📚 NoteShare</strong> — Made with ❤️ for students<br>
+  <span style="font-size:0.78rem;margin-top:6px;display:block">© 2024 NoteShare Platform. All rights reserved.</span>
+</footer>
+
+<script src="/js/app.js"></script>
+<script>
+  // Hero search
+  function heroSearch() {
+    const q = document.getElementById('hero-search-input').value.trim();
+    if (q) window.location.href = `/view-notes?search=${encodeURIComponent(q)}`;
+    else window.location.href = '/view-notes';
+  }
+
+  document.getElementById('hero-search-input').addEventListener('keypress', e => {
+    if (e.key === 'Enter') heroSearch();
+  });
+
+  // Load latest notes
+  async function loadLatestNotes() {
+    const grid = document.getElementById('latest-notes-grid');
+    try {
+      const { data } = await apiRequest('/api/notes/latest');
+      if (!data.notes || data.notes.length === 0) {
+        grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
+          <div class="empty-icon">📭</div>
+          <div class="empty-title">No notes yet!</div>
+          <div class="empty-text">Be the first to <a href="/upload" style="color:var(--primary)">upload notes</a>.</div>
+        </div>`;
+        return;
+      }
+      grid.innerHTML = data.notes.map(n => buildNoteCard(n)).join('');
+
+      // Animate stats
+      animateCount('stat-notes', data.notes.length, '+');
+    } catch {
+      grid.innerHTML = `<div class="alert alert-error" style="grid-column:1/-1">Failed to load notes.</div>`;
+    }
+  }
+
+  // Animate counters
+  function animateCount(id, value, suffix = '') {
+    const el = document.getElementById(id);
+    if (!el) return;
+    let cur = 0;
+    const step = Math.ceil(value / 30);
+    const timer = setInterval(() => {
+      cur = Math.min(cur + step, value);
+      el.textContent = cur + suffix;
+      if (cur >= value) clearInterval(timer);
+    }, 40);
+  }
+
+  async function loadStats() {
+    try {
+      const { data } = await apiRequest('/api/notes?limit=100');
+      const total = data.total || 0;
+      const downloads = (data.notes || []).reduce((s, n) => s + (n.download_count || 0), 0);
+      animateCount('stat-notes', total);
+      animateCount('stat-students', Math.max(total * 2, 10));
+      animateCount('stat-downloads', downloads);
+    } catch {}
+  }
+
+  loadLatestNotes();
+  loadStats();
+</script>
+</body>
+</html>

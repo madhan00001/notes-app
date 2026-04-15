@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Browse Notes — NoteShare</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+  <div class="nav-container">
+    <a href="/" class="nav-logo">
+      <div class="logo-icon">📚</div>
+      NoteShare
+    </a>
+    <ul class="nav-links" id="nav-links">
+      <li><a href="/">Home</a></li>
+      <li><a href="/view-notes" class="active">View Notes</a></li>
+      <li><a href="/upload" id="nav-upload" style="display:none">Upload</a></li>
+      <li><a href="/dashboard" id="nav-user-info" style="display:none;align-items:center;gap:6px"><span></span></a></li>
+      <li><a href="/login" id="nav-login">Login</a></li>
+      <li><a href="/register" id="nav-register" class="btn-nav btn">Register</a></li>
+      <li><button id="nav-logout" onclick="logout()" class="btn btn-sm" style="display:none;background:#fee2e2;color:#dc2626;border:none;cursor:pointer">Logout</button></li>
+    </ul>
+    <div id="hamburger" class="hamburger"><span></span><span></span><span></span></div>
+  </div>
+</nav>
+
+<!-- PAGE HEADER -->
+<div class="page-header">
+  <div class="page-header-content">
+    <h1>🔍 Browse Notes</h1>
+    <p>Find notes by subject, keyword, or topic</p>
+  </div>
+</div>
+
+<div class="section">
+
+  <!-- SEARCH & FILTER -->
+  <div class="filter-bar">
+    <input type="text" id="search-input" placeholder="🔍 Search by title, subject, or keyword..." value="" oninput="debounceSearch()">
+    <select id="subject-filter" onchange="loadNotes(true)">
+      <option value="all">📚 All Subjects</option>
+    </select>
+    <button class="btn btn-primary btn-sm" onclick="loadNotes(true)">Search</button>
+    <button class="btn btn-outline btn-sm" onclick="clearFilters()">Clear</button>
+  </div>
+
+  <!-- RESULTS INFO -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+    <div id="results-info" style="font-size:0.88rem;color:var(--text-muted)">Loading...</div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <span style="font-size:0.82rem;color:var(--text-muted)">Sort:</span>
+      <select id="sort-select" class="form-control" style="width:auto;padding:6px 12px;font-size:0.82rem" onchange="loadNotes(true)">
+        <option value="latest">Latest First</option>
+        <option value="downloads">Most Downloaded</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- NOTES GRID -->
+  <div id="notes-grid" class="cards-grid">
+    <div class="loader"><div class="spinner"></div></div>
+  </div>
+
+  <!-- PAGINATION -->
+  <div id="pagination" class="pagination"></div>
+
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <strong>📚 NoteShare</strong> — Made with ❤️ for students
+</footer>
+
+<script src="/js/app.js"></script>
+<script>
+  const PER_PAGE = 12;
+  let currentPage = 1;
+  let totalNotes = 0;
+  let debounceTimer = null;
+
+  // Read URL params on load
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('search')) {
+    document.getElementById('search-input').value = urlParams.get('search');
+  }
+
+  async function loadSubjects() {
+    const { data } = await apiRequest('/api/notes/subjects');
+    const sel = document.getElementById('subject-filter');
+    (data.subjects || []).forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s;
+      opt.textContent = s;
+      sel.appendChild(opt);
+    });
+    if (urlParams.get('subject')) sel.value = urlParams.get('subject');
+  }
+
+  function debounceSearch() {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => loadNotes(true), 420);
+  }
+
+  function clearFilters() {
+    document.getElementById('search-input').value = '';
+    document.getElementById('subject-filter').value = 'all';
+    loadNotes(true);
+  }
+
+  async function loadNotes(reset = false) {
+    if (reset) currentPage = 1;
+
+    const search = document.getElementById('search-input').value.trim();
+    const subject = document.getElementById('subject-filter').value;
+    const offset = (currentPage - 1) * PER_PAGE;
+
+    const grid = document.getElementById('notes-grid');
+    const info = document.getElementById('results-info');
+
+    grid.innerHTML = '<div class="loader"><div class="spinner"></div></div>';
+
+    let url = `/api/notes?limit=${PER_PAGE}&offset=${offset}`;
+    if (search) url += `&search=${encodeURIComponent(search)}`;
+    if (subject && subject !== 'all') url += `&subject=${encodeURIComponent(subject)}`;
+
+    try {
+      const { data } = await apiRequest(url);
+      const notes = data.notes || [];
+      totalNotes = data.total || 0;
+
+      info.textContent = `${totalNotes} note${totalNotes !== 1 ? 's' : ''} found${search ? ` for "${search}"` : ''}`;
+
+      if (notes.length === 0) {
+        grid.innerHTML = `
+          <div class="empty-state" style="grid-column:1/-1">
+            <div class="empty-icon">🔍</div>
+            <div class="empty-title">No notes found</div>
+            <div class="empty-text">Try a different keyword or subject, or <a href="/upload" style="color:var(--primary)">upload your own</a>!</div>
+          </div>`;
+        document.getElementById('pagination').innerHTML = '';
+        return;
+      }
+
+      grid.innerHTML = notes.map(n => buildNoteCard(n)).join('');
+      renderPagination();
+    } catch {
+      grid.innerHTML = `<div class="alert alert-error" style="grid-column:1/-1">Failed to load notes. Please try again.</div>`;
+    }
+  }
+
+  function renderPagination() {
+    const totalPages = Math.ceil(totalNotes / PER_PAGE);
+    const pag = document.getElementById('pagination');
+    if (totalPages <= 1) { pag.innerHTML = ''; return; }
+
+    let html = '';
+    if (currentPage > 1) {
+      html += `<button class="page-btn" onclick="goPage(${currentPage - 1})">‹</button>`;
+    }
+
+    for (let i = 1; i <= totalPages; i++) {
+      if (i === 1 || i === totalPages || Math.abs(i - currentPage) <= 2) {
+        html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="goPage(${i})">${i}</button>`;
+      } else if (Math.abs(i - currentPage) === 3) {
+        html += `<span style="display:flex;align-items:center;padding:0 4px;color:var(--text-muted)">…</span>`;
+      }
+    }
+
+    if (currentPage < totalPages) {
+      html += `<button class="page-btn" onclick="goPage(${currentPage + 1})">›</button>`;
+    }
+    pag.innerHTML = html;
+  }
+
+  function goPage(page) {
+    currentPage = page;
+    loadNotes();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  loadSubjects();
+  loadNotes();
+</script>
+</body>
+</html>
