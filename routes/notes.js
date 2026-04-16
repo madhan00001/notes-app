@@ -2,13 +2,10 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
 const db = require('../config/db');
+const { cloudinary, storage } = require('../config/cloudinary'); // ✅ Cloudinary
 
-/* ---------------- MULTER SETUP ---------------- */
-
-const UPLOADS_DIR = path.join(__dirname, '..', 'uploads');
-if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+/* ---------------- MULTER SETUP (Cloudinary) ---------------- */
 
 const ALLOWED_TYPES = [
   'application/pdf',
@@ -23,16 +20,8 @@ const ALLOWED_TYPES = [
 
 const ALLOWED_EXTS = ['.pdf', '.doc', '.docx', '.ppt', '.pptx', '.txt', '.png', '.jpg', '.jpeg'];
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, UPLOADS_DIR),
-  filename: (req, file, cb) => {
-    const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    cb(null, unique + path.extname(file.originalname));
-  }
-});
-
 const upload = multer({
-  storage,
+  storage, // ✅ Cloudinary storage (not disk)
   limits: { fileSize: 20 * 1024 * 1024 }, // 20 MB
   fileFilter: (req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
@@ -63,10 +52,20 @@ router.post('/upload', requireAuth, upload.single('file'), async (req, res) => {
     return res.status(400).json({ error: 'Title and subject are required.' });
 
   try {
+    // ✅ req.file.path = permanent Cloudinary URL (e.g. https://res.cloudinary.com/...)
+    // ✅ req.file.filename = Cloudinary public_id (used for deletion later)
     await db.query(
       `INSERT INTO notes (title, subject, description, file_path, file_name, file_size, uploaded_by)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [title, subject, description || '', req.file.filename, req.file.originalname, req.file.size, req.session.userId]
+      [
+        title,
+        subject,
+        description || '',
+        req.file.path,          // ✅ Full Cloudinary URL (permanent)
+        req.file.originalname,  // Original filename shown to users
+        req.file.size,
+        req.session.userId
+      ]
     );
     res.status(201).json({ message: 'Note uploaded successfully.' });
   } catch (err) {
@@ -147,28 +146,25 @@ router.get('/subjects', async (req, res) => {
   }
 });
 
-// GET /api/notes/download/:id
+// GET /api/notes/download/:id  ✅ Now redirects to Cloudinary URL
 router.get('/download/:id', async (req, res) => {
   try {
     const [rows] = await db.query('SELECT * FROM notes WHERE id = ?', [req.params.id]);
     if (rows.length === 0) return res.status(404).json({ error: 'Note not found.' });
 
     const note = rows[0];
-    const filePath = path.join(UPLOADS_DIR, note.file_path);
-
-    if (!fs.existsSync(filePath))
-      return res.status(404).json({ error: 'File not found on server.' });
 
     await db.query('UPDATE notes SET download_count = download_count + 1 WHERE id = ?', [note.id]);
 
-    res.download(filePath, note.file_name);
+    // ✅ file_path is now a full Cloudinary URL — just redirect to it
+    res.redirect(note.file_path);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error.' });
   }
 });
 
-// DELETE /api/notes/:id
+// DELETE /api/notes/:id  ✅ Also deletes from Cloudinary
 router.delete('/:id', requireAuth, async (req, res) => {
   try {
     const [rows] = await db.query('SELECT * FROM notes WHERE id = ?', [req.params.id]);
@@ -178,8 +174,17 @@ router.delete('/:id', requireAuth, async (req, res) => {
     if (note.uploaded_by !== req.session.userId)
       return res.status(403).json({ error: 'Not authorized.' });
 
-    const filePath = path.join(UPLOADS_DIR, note.file_path);
-    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    // ✅ Delete from Cloudinary using the public_id extracted from the URL
+    try {
+      const urlParts = note.file_path.split('/');
+      const fileWithExt = urlParts[urlParts.length - 1];
+      const publicId = 'noteshare/' + fileWithExt.replace(/\.[^/.]+$/, ''); // strip extension
+      await cloudinary.uploader.destroy(publicId, { resource_type: 'raw' });
+      // Also try image resource type (for jpg/png)
+      await cloudinary.uploader.destroy(publicId, { resource_type: 'image' }).catch(() => {});
+    } catch (cloudErr) {
+      console.warn('Cloudinary delete warning (non-fatal):', cloudErr.message);
+    }
 
     await db.query('DELETE FROM notes WHERE id = ?', [req.params.id]);
     res.json({ message: 'Note deleted.' });
