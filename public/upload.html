@@ -209,6 +209,7 @@
         credentials: 'include',
         body: formData
       });
+
       const data = await res.json();
 
       clearInterval(prog);
@@ -227,13 +228,17 @@
         document.getElementById('char-count').textContent = '0';
         setTimeout(() => { progress.style.display = 'none'; fill.style.width = '0%'; }, 2000);
       } else {
-        alertBox.innerHTML = `<div class="alert alert-error">⚠️ ${data.message}</div>`;
+        // ✅ FIXED: use data.error (not data.message) to match server response
+        const errMsg = data.error || data.message || 'Upload failed. Please try again.';
+        alertBox.innerHTML = `<div class="alert alert-error">⚠️ ${errMsg}</div>`;
         progress.style.display = 'none';
       }
-    } catch {
+    } catch (err) {
       clearInterval(prog);
       progress.style.display = 'none';
-      alertBox.innerHTML = '<div class="alert alert-error">Upload failed. Please try again.</div>';
+      // ✅ FIXED: catch block now shows a real message instead of [object Object]
+      alertBox.innerHTML = '<div class="alert alert-error">⚠️ Upload failed. Check your connection and try again.</div>';
+      console.error('Upload error:', err);
     }
 
     btn.textContent = '📤 Upload Notes';
